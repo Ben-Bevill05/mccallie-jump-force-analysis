@@ -1,0 +1,11 @@
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+.DS_Store
+.quarto/
+analysis/*_files/
+analysis/*.html
+# Athlete data is private, never commit it
+data/*.xlsx
+data/*.csv

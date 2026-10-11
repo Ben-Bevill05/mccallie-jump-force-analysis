@@ -1,0 +1,413 @@
+---
+title: "Jump Heights Final Report"
+author: "Ben Bevill"
+format:
+  html:
+    toc: true
+    toc-location: left
+    theme: cerulean
+    highlight-style: pygments
+---
+
+I analyzed the jump data from 2023–2026 to find the relationship between jump height and relative propulsive force. I created normative force ranges for different jump heights, visualized those ranges with color-coded charts.
+
+## Normative Relative Force Table
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+# 1. Load packages
+library(tidyverse)
+library(readxl)
+library(knitr)
+library(kableExtra)
+
+jump_data <- read_excel(
+  here::here("data", "jump_data.xlsx"),
+  sheet = "Sheet6"
+)
+
+# 4. Keep the variables needed for this analysis
+jump_clean <- jump_data %>%
+  select(
+    `Jump Height`,
+    `Avg. Relative Propulsive Force`,
+    `Countermovement Depth`
+  ) %>%
+  drop_na(
+    `Jump Height`,
+    `Avg. Relative Propulsive Force`
+  )
+
+
+# 5. Create Coach's jump-height ranges
+jump_groups <- jump_clean %>%
+  mutate(
+    jump_range = case_when(
+      `Jump Height` >= 25 & `Jump Height` <= 30 ~ "25-30",
+      `Jump Height` >= 20 & `Jump Height` < 25 ~ "20-24",
+      `Jump Height` >= 15 & `Jump Height` < 20 ~ "15-19",
+      `Jump Height` >= 10 & `Jump Height` < 15 ~ "10-14",
+      `Jump Height` >= 5  & `Jump Height` < 10 ~ "5-9",
+      TRUE ~ NA_character_
+    )
+  )
+
+
+# 6. Set the order of the jump-height categories
+jump_groups <- jump_groups %>%
+  mutate(
+    jump_range = factor(
+      jump_range,
+      levels = c(
+        "25-30",
+        "20-24",
+        "15-19",
+        "10-14",
+        "5-9"
+      )
+    )
+  )
+
+
+# 7. Calculate normative statistics for each group
+normative_table <- jump_groups %>%
+  filter(!is.na(jump_range)) %>%
+  group_by(jump_range) %>%
+  summarise(
+    
+    # Number of jumps in the category
+    n = n(),
+    
+    # Average relative propulsive force
+    avg_force = mean(
+      `Avg. Relative Propulsive Force`,
+      na.rm = TRUE
+    ),
+    
+    # Median relative propulsive force
+    median_force = median(
+      `Avg. Relative Propulsive Force`,
+      na.rm = TRUE
+    ),
+    
+    # 25th percentile
+    lower_norm = quantile(
+      `Avg. Relative Propulsive Force`,
+      0.25,
+      na.rm = TRUE
+    ),
+    
+    # 75th percentile
+    upper_norm = quantile(
+      `Avg. Relative Propulsive Force`,
+      0.75,
+      na.rm = TRUE
+    ),
+    
+    # Standard deviation
+    sd_force = sd(
+      `Avg. Relative Propulsive Force`,
+      na.rm = TRUE
+    )
+  )
+
+
+# 8. Round the numbers so the table is easy to read
+normative_table <- normative_table %>%
+  mutate(
+    across(
+      c(
+        avg_force,
+        median_force,
+        lower_norm,
+        upper_norm,
+        sd_force
+      ),
+      ~ round(.x, 1)
+    )
+  )
+
+
+# 9. Rename columns for the final deliverable
+normative_table <- normative_table %>%
+  rename(
+    `Jump Height Range (in)` = jump_range,
+    `Number of Jumps` = n,
+    `Average Force (% BW)` = avg_force,
+    `Median Force (% BW)` = median_force,
+    `Lower Norm - 25th %ile` = lower_norm,
+    `Upper Norm - 75th %ile` = upper_norm,
+    `Standard Deviation` = sd_force
+  )
+
+
+# 10. View the finished normative table
+
+normative_table %>%
+  kable(
+    caption = "McCallie Countermovement Jump Normative Data (2023-2026)",
+    align = c("c", "c", "c", "c", "c", "c", "c")
+  ) %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position = "center"
+  )
+
+
+```
+
+This table summarizes the jump data by grouping athletes based on how high they jumped. It shows the typical amount of force produced by athletes in each jump-height range and gives us a baseline for what is considered normal at McCallie.
+
+## Color-Coded Normative Force Chart
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+force_chart <- jump_groups %>%
+  filter(!is.na(jump_range)) %>%
+  group_by(jump_range) %>%
+  summarise(
+    
+    # 25th percentile = bottom of normal range
+    lower_norm = quantile(
+      `Avg. Relative Propulsive Force`,
+      0.25,
+      na.rm = TRUE
+    ),
+    
+    # Median = typical force
+    median_force = median(
+      `Avg. Relative Propulsive Force`,
+      na.rm = TRUE
+    ),
+    
+    # 75th percentile = top of normal range
+    upper_norm = quantile(
+      `Avg. Relative Propulsive Force`,
+      0.75,
+      na.rm = TRUE
+    )
+  )
+
+
+# 2. Make sure jump-height groups appear from lowest to highest
+
+force_chart <- force_chart %>%
+  mutate(
+    jump_range = factor(
+      jump_range,
+      levels = c(
+        "5-9",
+        "10-14",
+        "15-19",
+        "20-24",
+        "25-30"
+      )
+    )
+  )
+
+
+# 3. Create the color-coded chart
+
+ggplot(force_chart, aes(x = jump_range)) +
+  
+  # RED: Below expected relative force
+  geom_rect(
+    aes(
+      xmin = as.numeric(jump_range) - 0.4,
+      xmax = as.numeric(jump_range) + 0.4,
+      ymin = 130,
+      ymax = lower_norm
+    ),
+    fill = "red",
+    alpha = 0.25
+  ) +
+  
+  # GREEN: Normal relative force range
+  geom_rect(
+    aes(
+      xmin = as.numeric(jump_range) - 0.4,
+      xmax = as.numeric(jump_range) + 0.4,
+      ymin = lower_norm,
+      ymax = upper_norm
+    ),
+    fill = "green",
+    alpha = 0.35
+  ) +
+  
+  # BLUE: Above expected relative force
+  geom_rect(
+    aes(
+      xmin = as.numeric(jump_range) - 0.4,
+      xmax = as.numeric(jump_range) + 0.4,
+      ymin = upper_norm,
+      ymax = 300
+    ),
+    fill = "steelblue",
+    alpha = 0.25
+  ) +
+  
+  # Median relative force dots
+  geom_point(
+    aes(y = median_force),
+    size = 4
+  ) +
+  
+  # Add median force value above each dot
+  geom_text(
+    aes(
+      y = median_force,
+      label = paste0(round(median_force, 1), "%")
+    ),
+    vjust = -1,
+    fontface = "bold",
+    size = 4
+  ) +
+  
+  labs(
+    title = "McCallie Relative Propulsive Force Norms",
+    subtitle = "Countermovement Jump Data, 2023-2026",
+    x = "Jump Height Range (inches)",
+    y = "Average Relative Propulsive Force (% Bodyweight)",
+    caption = paste(
+      "Red = Below Expected |",
+      "Green = Normal Range |",
+      "Blue = Above Expected"
+    )
+  ) +
+  
+  coord_cartesian(
+    ylim = c(130, 300)
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 16
+    ),
+    
+    plot.subtitle = element_text(
+      size = 12
+    ),
+    
+    axis.title = element_text(
+      face = "bold"
+    ),
+    
+    axis.text = element_text(
+      size = 11
+    )
+  )
+```
+
+This chart turns the normative data into an easy-to-read visual. The different colors show whether an athlete's force production is below, within, or above the typical range for a certain jump height.
+
+## Force vs. Jump Height Relationship
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+jump_correlation <- cor(
+  jump_clean$`Jump Height`,
+  jump_clean$`Avg. Relative Propulsive Force`,
+  use = "complete.obs"
+)
+
+jump_correlation
+
+jump_model <- lm(
+  `Jump Height` ~ `Avg. Relative Propulsive Force`,
+  data = jump_clean
+)
+summary(jump_model)
+
+r_squared <- summary(jump_model)$r.squared
+
+r_squared
+
+
+jump_correlation <- round(jump_correlation, 3)
+r_squared <- round(r_squared, 3)
+
+jump_correlation
+r_squared
+
+
+ggplot(
+  jump_clean,
+  aes(
+    x = `Avg. Relative Propulsive Force`,
+    y = `Jump Height`
+  )
+) +
+  
+  # Each point represents a jump
+  geom_point(
+    alpha = 0.2,
+    size = 1.5
+  ) +
+  
+  # Regression line
+  geom_smooth(
+    method = "lm",
+    se = TRUE,
+    linewidth = 1
+  ) +
+  
+  # Display correlation and R-squared
+  annotate(
+    "text",
+    x = Inf,
+    y = -Inf,
+    label = paste0(
+      "r = ", jump_correlation,
+      "\nR² = ", r_squared
+    ),
+    hjust = 1.2,
+    vjust = -1,
+    size = 5
+  ) +
+  
+  labs(
+    title = "Relationship Between Relative Force and Jump Height",
+    subtitle = "McCallie Countermovement Jump Data, 2023-2026",
+    x = "Average Relative Propulsive Force (% Bodyweight)",
+    y = "Jump Height (inches)",
+    caption = "Each point represents a countermovement jump."
+  ) +
+  
+  theme_minimal() +
+  
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 16
+    ),
+    
+    plot.subtitle = element_text(
+      size = 12
+    ),
+    
+    axis.title = element_text(
+      face = "bold"
+    ),
+    
+    axis.text = element_text(
+      size = 11
+    )
+  )
+
+
+```
+
+This graph shows the overall relationship between how much force an athlete produces relative to their bodyweight and how high they jump. It helps show whether producing more relative force is generally connected to jumping higher.
