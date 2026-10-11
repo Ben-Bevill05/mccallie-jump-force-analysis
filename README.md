@@ -5,7 +5,7 @@ Strength coaches collect thousands of force-plate jumps, but raw numbers don't t
 **Tools:** R · tidyverse · readxl · knitr / kableExtra · ggplot2 · Quarto
 **Methods:** Descriptive statistics · percentile-based norms · correlation · linear regression · data visualization
 
-📊 **[Read the full write-up on my portfolio →](https://ben-bevill05.github.io/benbevill.github.io/mccallie.html)**
+📊 **[Read the full write-up on my portfolio →](https://ben-bevill05.github.io/mccallie.html)**
 
 ---
 
@@ -56,4 +56,4 @@ The underlying force-plate data contains individual athlete records and is **not
 
 ---
 
-**Ben Bevill** · Data Analytics, Denison University · [Portfolio](https://ben-bevill05.github.io/benbevill.github.io/) · [LinkedIn](https://www.linkedin.com/in/ben-bevill-5a9190331/)
+**Ben Bevill** · Data Analytics, Denison University · [Portfolio](https://ben-bevill05.github.io/) · [LinkedIn](https://www.linkedin.com/in/ben-bevill-5a9190331/)
